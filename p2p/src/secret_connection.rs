@@ -43,7 +43,7 @@ mod public_key;
 pub const TAG_SIZE: usize = 16;
 
 /// Maximum size of a message
-pub const DATA_MAX_SIZE: usize = 10240;
+pub const DATA_MAX_SIZE: usize = 65536;
 
 /// 4 + 1024 == 1028 total frame size
 const DATA_LEN_SIZE: usize = 4;
@@ -308,6 +308,8 @@ impl<IoHandler: Read + Write + Send + Sync> SecretConnection<IoHandler> {
             terminate: Arc::new(AtomicBool::new(false)),
         };
 
+        println!("::SecretConnection::new: before auth sig msg");
+
         // Share each other's pubkey & challenge signature.
         // NOTE: the data must be encrypted/decrypted using ciphers.
         let auth_sig_msg = match local_pubkey {
@@ -315,6 +317,8 @@ impl<IoHandler: Read + Write + Send + Sync> SecretConnection<IoHandler> {
                 share_auth_signature(&mut sc, pk, &h.state.local_signature)?
             },
         };
+
+        println!("::SecretConnection::new: after auth sig msg");
 
         // Authenticate remote pubkey.
         let remote_pubkey = h.got_signature(auth_sig_msg)?;
@@ -476,15 +480,23 @@ fn share_auth_signature<IoHandler: Read + Write + Send + Sync>(
     pubkey: &ed25519_consensus::VerificationKey,
     local_signature: &ed25519_consensus::Signature,
 ) -> Result<proto::p2p::AuthSigMessage, Error> {
+    println!("p2p::secret_connection::share_auth_signature(...)");
     let buf = sc
         .protocol_version
         .encode_auth_signature(pubkey, local_signature);
+    println!("::share_auth_signature: buf: {:?}", buf);
 
     sc.write_all(&buf)?;
+    println!("::share_auth_signature: after sc.write_all");
 
+    println!("::share_auth_signature: auth sig msg response len: {}", sc.protocol_version.auth_sig_msg_response_len());
     let mut buf = vec![0; sc.protocol_version.auth_sig_msg_response_len()];
+    println!("::share_auth_signature: after buf allocation");
     sc.read_exact(&mut buf)?;
-    sc.protocol_version.decode_auth_signature(&buf)
+    println!("::share_auth_signature: after read exact");
+    let r = sc.protocol_version.decode_auth_signature(&buf);
+    println!("::share_auth_signature: after sc.protocol_version.decode_auth_signature");
+    r
 }
 
 /// Return is of the form lo, hi
