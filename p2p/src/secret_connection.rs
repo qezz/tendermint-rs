@@ -43,7 +43,7 @@ mod public_key;
 pub const TAG_SIZE: usize = 16;
 
 /// Maximum size of a message
-pub const DATA_MAX_SIZE: usize = 1024000;
+pub const DATA_MAX_SIZE: usize = 10240;
 
 /// 4 + 1024 == 1028 total frame size
 const DATA_LEN_SIZE: usize = 4;
